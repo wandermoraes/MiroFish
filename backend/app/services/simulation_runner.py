@@ -653,6 +653,19 @@ class SimulationRunner:
                 
                 # 更新状态
                 cls._save_run_state(state)
+
+                # The simulation script stays alive after its last round to
+                # serve interview commands. Publish COMPLETED as soon as every
+                # platform has ended and Zep ingestion has drained, instead of
+                # waiting for a process exit that never happens on its own.
+                if (
+                    state.runner_status == RunnerStatus.RUNNING
+                    and cls._check_all_platforms_completed(state)
+                ):
+                    state = cls._complete_while_waiting_for_commands(
+                        simulation_id, state
+                    )
+
                 time.sleep(2)
             
             # 进程结束后，最后读取一次日志
@@ -676,10 +689,14 @@ class SimulationRunner:
                 if latest_state is not None:
                     state = latest_state
 
+                already_completed = (
+                    state.runner_status == RunnerStatus.COMPLETED
+                    and simulation_id not in cls._manual_stop_requests
+                )
                 if state.runner_status not in {
                     RunnerStatus.STOPPED,
                     RunnerStatus.FAILED,
-                }:
+                } and not already_completed:
                     manual_stop = simulation_id in cls._manual_stop_requests
                     desired_status = (
                         RunnerStatus.STOPPED
@@ -879,6 +896,59 @@ class SimulationRunner:
             return position
     
     @classmethod
+    def is_process_alive(cls, simulation_id: str) -> bool:
+        """True while the simulation script process is still running."""
+        process = cls._processes.get(simulation_id)
+        return process is not None and process.poll() is None
+
+    @classmethod
+    def _complete_while_waiting_for_commands(
+        cls, simulation_id: str, state: SimulationRunState
+    ) -> SimulationRunState:
+        """Publish COMPLETED after the rounds end, keeping the process alive.
+
+        Drains the Zep graph-memory updater first (same barrier used on process
+        exit), so the report never observes COMPLETED before ingestion is done.
+        """
+        with cls._finalization_lock(simulation_id):
+            latest = cls.get_run_state(simulation_id)
+            if latest is not None:
+                state = latest
+            if (
+                state.runner_status != RunnerStatus.RUNNING
+                or simulation_id in cls._manual_stop_requests
+            ):
+                return state
+
+            state.twitter_running = False
+            state.reddit_running = False
+            desired_status = RunnerStatus.COMPLETED
+            error_message = None
+
+            if cls._graph_memory_enabled.get(simulation_id, False):
+                state.runner_status = RunnerStatus.STOPPING
+                cls._save_run_state(state)
+                cls._sync_simulation_status(simulation_id, RunnerStatus.STOPPING)
+                try:
+                    ZepGraphMemoryManager.stop_updater(simulation_id)
+                    cls._graph_memory_enabled.pop(simulation_id, None)
+                except Exception as error:
+                    logger.error(f"停止图谱记忆更新器失败: {error}")
+                    desired_status = RunnerStatus.FAILED
+                    error_message = f"Zep图谱写入未完整完成: {error}"
+
+            state.runner_status = desired_status
+            state.error = error_message
+            state.completed_at = datetime.now().isoformat()
+            cls._save_run_state(state)
+            cls._sync_simulation_status(simulation_id, desired_status, error_message)
+            if desired_status == RunnerStatus.COMPLETED:
+                logger.info(
+                    f"模拟完成（环境保持运行以支持采访）: {simulation_id}"
+                )
+            return state
+
+    @classmethod
     def _check_all_platforms_completed(cls, state: SimulationRunState) -> bool:
         """
         检查所有启用的平台是否都已完成模拟
@@ -979,6 +1049,10 @@ class SimulationRunner:
                     RunnerStatus.FAILED,
                 }
             )
+            completed_but_alive = (
+                state.runner_status == RunnerStatus.COMPLETED
+                and cls.is_process_alive(simulation_id)
+            )
             if (
                 state.runner_status not in [
                     RunnerStatus.STARTING,
@@ -987,6 +1061,7 @@ class SimulationRunner:
                     RunnerStatus.STOPPING,
                 ]
                 and not retrying_finalization
+                and not completed_but_alive
             ):
                 raise ValueError(
                     f"模拟未在运行: {simulation_id}, status={state.runner_status}"

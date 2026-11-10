@@ -1605,7 +1605,12 @@ def start_simulation():
             if is_prepared:
                 run_state = SimulationRunner.get_run_state(simulation_id)
                 updater = ZepGraphMemoryManager.get_updater(simulation_id)
-                needs_finalization = bool(
+                completed_but_alive = bool(
+                    run_state
+                    and run_state.runner_status == RunnerStatus.COMPLETED
+                    and SimulationRunner.is_process_alive(simulation_id)
+                )
+                needs_finalization = completed_but_alive or bool(
                     run_state
                     and run_state.runner_status in {
                         RunnerStatus.RUNNING,
