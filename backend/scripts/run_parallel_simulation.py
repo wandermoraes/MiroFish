@@ -1031,9 +1031,14 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
     
     print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else '默认'}...")
     
+    from llm_model_config import camel_model_config
+    model_config = camel_model_config(llm_model)
+    if model_config:
+        print(f"model_config={model_config}")
     return ModelFactory.create(
         model_platform=ModelPlatformType.OPENAI,
         model_type=llm_model,
+        model_config_dict=model_config,
     )
 
 
