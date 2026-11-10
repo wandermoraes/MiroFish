@@ -1314,6 +1314,7 @@ watch(() => props.simulationId, (newId) => {
 /* Action Bar - Professional Design */
 .action-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
@@ -1358,6 +1359,8 @@ watch(() => props.simulationId, (newId) => {
 
 .action-bar-tabs {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   flex: 1;
@@ -1821,9 +1824,9 @@ watch(() => props.simulationId, (newId) => {
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 240px;
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - 32px);
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
   border-radius: 12px;

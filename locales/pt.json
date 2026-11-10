@@ -75,7 +75,13 @@
     "layoutGraph": "Grafo",
     "layoutSplit": "Dividido",
     "layoutWorkbench": "Bancada",
-    "stepNames": ["Construção do Grafo", "Configuração do Ambiente", "Executar Simulação", "Geração do Relatório", "Interação Profunda"]
+    "stepNames": [
+      "Construção do Grafo",
+      "Configuração do Ambiente",
+      "Executar Simulação",
+      "Geração do Relatório",
+      "Interação Profunda"
+    ]
   },
   "step1": {
     "ontologyGeneration": "Geração da Ontologia",
@@ -252,10 +258,10 @@
   "step5": {
     "interactiveTools": "Ferramentas Interativas",
     "agentsAvailable": "{count} agentes disponíveis",
-    "chatWithReportAgent": "Conversar com o Report Agent",
-    "chatWithAgent": "Conversar com qualquer indivíduo do mundo",
+    "chatWithReportAgent": "Report Agent",
+    "chatWithAgent": "Conversar com um indivíduo",
     "selectChatTarget": "Selecione com quem conversar",
-    "sendSurvey": "Enviar pesquisa ao mundo",
+    "sendSurvey": "Enviar pesquisa",
     "reportAgentChat": "Report Agent - Conversa",
     "reportAgentDesc": "Versão conversacional do agente que gera o relatório, com acesso a 4 ferramentas profissionais e à memória completa do MiroFish",
     "toolInsightForge": "InsightForge: Atribuição Profunda",
