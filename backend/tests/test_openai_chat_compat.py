@@ -121,3 +121,22 @@ def test_extracts_text_from_supported_content_shapes():
 
     assert extract_chat_completion_text(response) == "first second third"
     assert extract_chat_completion_text(SimpleNamespace(choices=[])) == ""
+
+
+@pytest.mark.parametrize(
+    "model,expected",
+    [
+        ("gpt-5", True),
+        ("gpt-5.6-luna", True),
+        ("gpt-6-luna", True),
+        ("gpt-6-sol", True),
+        ("openai/gpt-6-luna", True),
+        ("o4-mini", True),
+        ("gpt-4o-mini", False),
+        ("gpt-4.1-mini", False),
+        ("qwen-plus", False),
+        ("omni-chat", False),
+    ],
+)
+def test_reasoning_model_detection(model, expected):
+    assert is_gpt5_family(model) is expected

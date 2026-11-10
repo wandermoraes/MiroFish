@@ -7,14 +7,23 @@ gracefully adapting request parameters for GPT-5 family models.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 
+_REASONING_MODEL_PATTERN = re.compile(r"^(?:[\w.-]+/)?(?:gpt-(?:[5-9]|\d{2,})|o\d)")
+
+
 def is_gpt5_family(model: Optional[str]) -> bool:
-    """Return True when model belongs to GPT-5 family aliases/snapshots."""
+    """Return True for reasoning-style OpenAI models (GPT-5 and later, o-series).
+
+    These models reject custom `temperature` and legacy `max_tokens`, so they
+    get the GPT-5 request shape. An optional provider prefix such as
+    "openai/" (used by OpenAI-compatible routers) is ignored.
+    """
     if not model:
         return False
-    return model.strip().lower().startswith("gpt-5")
+    return bool(_REASONING_MODEL_PATTERN.match(model.strip().lower()))
 
 
 def create_chat_completion(
